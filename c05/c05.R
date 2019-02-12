@@ -1,8 +1,8 @@
 #' ---
-#' title: "class 05 R graphics intro"
+#' title: "class 05 Intro to R graphics"
 #' author: "Hong bo Che"
 #' date: "Jan 24th, 2019"
-
+#' utput: github_document
 #' ---
 
 #' class 05 R graphics intro
