@@ -45,3 +45,60 @@ because water have polar covalent bond and only the most electron place is shown
 not protein and not water and show class 1 HIV drug
 licorice fit in to surf_Protein
 
+## 3.1 getting started with bio3d Doing 1hsg in R
+```{r}
+library(bio3d)
+pdb <- read.pdb("1hsg.pdb") # get the pdb input
+pdb
+attributes(pdb)
+#attributes( + attr: )
+head(pdb$atom)
+pdb$atom # all data
+pdb$atom$resid # all aa
+aa321(pdb$atom$resid) #single letter with warning sequece
+```
+Q6. How many amino acid residues are there in this pdb object and what are the two nonprotein residues?
+# there are 198 residues from summary
+
+## 3.5atom selection
+
+```{r}
+ca.inds<- atom.select(pdb, "calpha")
+ca.inds
+head(pdb$atom[ca.inds$atom,]) # subset of atom
+
+```
+## how write just protein and and drug only parts of these molecular PDB files
+```{r}
+#li:ligand, pr:protein
+#skipping download if you read file again(waste of time)
+#temp<-bio3d::write.pdb()
+ca.inds<- atom.select(pdb, string = "calpha") #can just "___"(w/o string)
+pr.inds<- atom.select(pdb, string = "protein")
+li.inds<- atom.select(pdb, string = "ligand")
+li.inds
+pdb$atom[pr.inds$atom,]
+head(pdb$atom[pr.inds$atom,]) # prints out all protein bits
+pr.pdb <- trim.pdb(pdb, pr.inds)
+li.pdb <- trim.pdb(pdb, li.inds)
+write.pdb (pr.pdb, file = "protein.pdb") # parse out protein to pdb
+write.pdb (li.pdb, file = "ligand.pdb") #parse out ligands.pdb
+#can drag output to VMD
+```
+
+## bio3d view
+###
+#temp package not that available
+'''
+install.packages("devtools")
+devtools::install_bitbucket("Grantlab/bio3d-view")
+
+library("bio3d.view")
+pdb<-read.pdb("5p21")
+'''
+#view(pdb, "overview")
+#view(pdb,"overview",col="sse")
+##ec part
+
+Optional: Generate and save a figure clearly showing the two distinct chains of HIV-protease along with the ligand. You might also consider showing the catalytic residues ASP 25 in each chain (we recommend Licorice for these side-chains). Email this figure to bjgrant@ucsd.edu for grading.
+Discussion Topic: Can you think of a way in which indinavir, or even larger ligands and substrates, could enter the binding site?
