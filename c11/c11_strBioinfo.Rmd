@@ -1,0 +1,47 @@
+---
+title: "C11 structural bioinfo P1"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## GitHub Documents
+
+This is an R Markdown format used for publishing markdown documents to GitHub. When you click the **Knit** button all R code chunks are run and a markdown file (.md) suitable for publishing to GitHub is generated.
+
+Q1: Download a CSV file from the PDB site (accessible from “Analyze” -> “PDB Statistics” >
+“by Experimental Method and Molecular Type”. Move this CSV file into your RStudio project and determine the percentage of structures solved by X-Ray and Electron Microscopy. From the website what proportion of structures are protein? 
+(Aim to have a rendered GitHub document with working code that yields your answers)
+
+```{r}
+f <- read.csv("Data Export Summary.csv", , row.names = 1, header = TRUE, sep = ",")
+f
+f$Total/sum(f$Total)
+proteinProp <- f[,2]/(f[,3]+f[,2]+f[,4])*100
+proteinProp # percentage
+```
+
+```{r}
+percent.by.method <- f$Total/sum(f$Total)*100
+names(percent.by.method) <- rownames(f)
+percent.by.method
+#X-ray popular vs low popularity now electron microscopy
+```
+```{r}
+sum(f$Proteins)/sum(f$Total) * 100
+```
+Q2: Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB?
+**822 within currently showing **
+Total 2880
+ 1138 search within bar
+
+1HSG: breakthrough
+VMD display
+
+Q3: Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure?
+because water have polar covalent bond and only the most electron place is shown in circle. 
+not protein and not water and show class 1 HIV drug
+licorice fit in to surf_Protein
+
