@@ -1,0 +1,247 @@
+---
+title: "C15"
+author: "Hong Che"
+date: "February 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+package analyze drug data
+eg(Glucocorticoids)
+  ASM cells 
+  RNAseq: cell line (drug)
+    alignment
+  focus on CRISPLD2
+#importing different data in
+  ensgene: from ensembl db
+```{r}
+counts <- read.csv("data/airway_scaledcounts.csv", stringsAsFactors = FALSE)
+metadata <- read.csv("data/airway_metadata.csv", stringsAsFactors = FALSE)
+dim(counts)
+head(counts)
+head(metadata)
+```
+check matching columns 
+```{r}
+#ck files
+colnames(counts)
+metadata$id
+#print (colnames(counts))
+all(colnames(counts)[-1] == metadata$id)
+```
+#find the column of the control and their mean
+#Find which columns in **counts** correspond to the control conditions(ieg no drugs!). Then we calculate the mean 
+```{r}
+control <- metadata[metadata[,"dex"] == "control",]
+control.mean <- rowSums(counts[, control$id])/ncol(counts[,control$id]) # why 4 count of 4 treated/ctrl
+names(control.mean) <- counts$ensgene
+
+```
+#only access control 2 columns
+table 
+  ID(column)/ control/ Drug/ Control/ Drug
+  for inds we only want control/ control
+  
+#dont run FIX same method as above
+'''
+debbug 
+
+control.inds <- metadata$dex == " control"
+  #metadata$dex == "control"
+# head(counts[,control.inds])
+control.ids <- metadata$id[control.inds]
+head( counts[,control.ids])
+'''
+Calc mean of counts value for all genes
+# find why this is wrong
+control.mean <- rowSums(( counts[,control.ids])) / 4
+  #ncol(( counts[,control.ids]))
+names(control.mean) <- counts$ensgene
+head(control.mean)
+
+  Now do same thing for drug treated samples (ieg treated columns)
+```{r}
+treated <- metadata[metadata[,"dex"]=="treated",]
+treated.mean <- rowSums( counts[ ,treated$id] )/ncol(counts[,treated$id])
+names(treated.mean) <- counts$ensgene
+```
+Combine the mean count values for control and treated into a new data.frame called meancounts!
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+head(meancounts)
+```
+```{r}
+colSums(meancounts)
+```
+
+Now we can plot the drug treated vs non-drug control count values
+```{r}
+plot(meancounts$control.mean, meancounts$treated.mean)
+```
+We can find candidate differentially expressed genes by looking for genes with a large change between control and dex-treated samples. We usually look at the log2 of the fold change, because this has better mathematical properties.
+
+Here we calculate log2foldchange, add it to our meancounts data.frame and inspect the results either with the head() or the View() function for example.
+```{r}
+meancounts$log2fc <- log2(meancounts[,"treated.mean"]/meancounts[,"control.mean"])
+head(meancounts)
+
+```
+```{r}
+zero.vals <- which (meancounts[,1:2] == 0, arr.ind = TRUE)
+to.rm <- unique(zero.vals[,1] )
+mycounts <- meancounts[-to.rm,]
+head(mycounts)
+
+```
+
+```{r}
+#toy eg for which
+toy <- c(1,2,0,4,0)
+which(toy == 0)
+```
+
+```{r}
+toy <- meancounts[1:6,]
+toy[,1:2]
+which(toy[,1:2 ] == 0, arr.ind = TRUE) # more useful to have arr.ind
+unique(which(toy[,1:2 ] == 0, arr.ind = TRUE)[,1]) 
+```
+remove the zero entry genes from meancounts to prooduce **mycounts**
+```{r}
+# zero.vals <- which (meancounts[,1:2] == 0, arr.ind= TRUE)
+# to.rm <- unique (zero.vals[,1])
+# mycounts <- meancounts[-to.rm]
+# head(mycounts)
+meancounts$log2fc <- log2(meancounts[,"treated.mean"]/meancounts[,"control.mean"])
+head(meancounts)
+zero.vals <- which(meancounts[,1:2]==0, arr.ind=TRUE)
+
+to.rm <- unique(zero.vals[,1])
+mycounts <- meancounts[-to.rm,]
+head(mycounts)
+```
+
+```{r}
+up.ind <- mycounts$log2fc > 2
+down.ind <- mycounts$log2fc < (-2)
+sum(up.ind)
+```
+
+Therethere are `sum(up.ind)` up regulated genes and `sum(down.ind)` adown regulated genes.
+```{r}
+head(mycounts[up.ind, ])
+```
+#adding annotation 
+parse genome ENSG00000003 to known stuff in database
+
+merge() x is result y is annotation data
+  by, by.x, by.y
+  x = C/T/FC columns and y is ENSEMBL
+  
+  
+```{r}
+anno <- read.csv("data/annotables_grch38.csv")
+head(anno)
+
+```
+```{r}
+mycounts.annotated <- merge(x=mycounts, y = anno, by.x="row.names", by.y = "ensgene")
+head(mycounts.annotated)
+```
+
+#DESeq2 analysis
+  puts p value for above steps 
+  now we do this analysis properly with p-values!
+```{r}
+library(DESeq2) # dependencies
+```
+#set up object having all these in it
+  DESeqDataSet = 
+    1 countMatrix
+    2 metadataFile
+    3 designExperiment
+  tell it focus on drug
+  SH = dds
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = counts, 
+                              colData = metadata,
+                              design = ~dex,
+                              tidy=TRUE)
+dds
+```
+```{r}
+dds <- DESeq((dds))
+```
+```{r}
+res <- results(dds)
+head(res)
+```
+padjusted, pvalue, 
+```{r}
+summary(res)
+```
+#volcano plot = significantly regulated genes vs fold change 
+
+```{r}
+res05 <- results(dds , alpha = 0.05)
+summary(res05)
+```
+```{r}
+plot(res$log2FoldChange, -log(res$padj))
+```
+
+```{r}
+plotCounts(dds, gene="ENSG00000103196", intgroup="dex")
+```
+
+```{r}
+d <- plotCounts(dds, gene="ENSG00000103196", intgroup="dex", returnData=TRUE)
+head(d)
+```
+```{r}
+boxplot(count ~ dex , data=d)
+```
+another fold chain
+```{r}
+# order gray < blue < red!
+
+res01<-results(dds, alpha = 0.01)
+mycols<- rep("gray", nrow(res01))
+mycols[abs(res01$log2FoldChange)>2] <- "blue"
+
+#p above p point threshold red
+#change most of significant
+mycols[ abs(res01$log2FoldChange) >2 & res01$padj < 0.01] <- "red"
+plot(res01$log2FoldChange, -log(res01$padj), col=mycols, ylab="-log(P value)", xlab = "Log2(FoldChange)")
+```
+```{r}
+#temp proj
+volcanoPlot <- function(x) {
+  
+  resAny<-results(dds, alpha = x)
+  mycols<- rep("gray", nrow(res01))
+  mycols[abs(resAny$log2FoldChange)>2] <- "blue"
+  
+  #p above p point threshold red
+  #change most of significant
+  mycols[ abs(res01$log2FoldChange) >2 & resAny$padj < x] <- "red"
+  plot(res01$log2FoldChange, -log(res01$padj), col=mycols, ylab="-log(P value)", xlab = "Log2(FoldChange)")
+}
+volcanoPlot(0.5)
+```
+#next up find the gene
+```{r}
+
+```
+tinyurl.com/class15-classmd
+
